@@ -1,8 +1,7 @@
 import Box from "@mui/material/Box";
 import Container from "@mui/material/Container";
 import Typography from "@mui/material/Typography";
-import Lesson from "@/components/Lesson";
-import Visualizer from "@/components/Visualizer";
+import Main from "@/components/Main";
 
 export default function Home() {
   return (
@@ -16,10 +15,7 @@ export default function Home() {
             サブネットマスクで、IPアドレスのどこが「ネットワーク」でどこが「機器の番号」なのかを色分けして確かめよう
           </Typography>
         </Box>
-        <Visualizer />
-        <Box sx={{ mt: 2 }}>
-          <Lesson />
-        </Box>
+        <Main />
       </Container>
     </Box>
   );

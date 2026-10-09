@@ -126,3 +126,79 @@ export const PRESETS: { label: string; ip: Octets; prefix: number }[] = [
   { label: "小さく分割（/28）", ip: [192, 168, 10, 45], prefix: 28 },
   { label: "2台だけ（/30）", ip: [203, 0, 113, 5], prefix: 30 },
 ];
+
+// ───────── 練習問題 ─────────
+
+export type Level = 1 | 2 | 3;
+
+export type Question = {
+  level: Level;
+  ip: Octets;
+  prefix: number;
+};
+
+export const LEVELS: { level: Level; title: string; description: string }[] = [
+  {
+    level: 1,
+    title: "レベル1：境目をさがす",
+    description: "サブネットマスクを見て、IPアドレスのどこまでがネットワーク部かをクリックで答える",
+  },
+  {
+    level: 2,
+    title: "レベル2：ネットワークアドレス",
+    description: "ホスト部をすべて0にした「ネットワークアドレス」を答える",
+  },
+  {
+    level: 3,
+    title: "レベル3：ブロードキャストアドレス",
+    description: "ホスト部をすべて1にした「ブロードキャストアドレス」を答える",
+  },
+];
+
+export const QUESTIONS_PER_SET = 10;
+
+function randomInt(max: number): number {
+  return Math.floor(Math.random() * max);
+}
+
+/** それらしいIPアドレスを作る（プライベートアドレスが中心） */
+function randomIp(): Octets {
+  const r = Math.random();
+  if (r < 0.35) return [192, 168, randomInt(256), 1 + randomInt(254)];
+  if (r < 0.55) return [10, randomInt(256), randomInt(256), 1 + randomInt(254)];
+  if (r < 0.75) return [172, 16 + randomInt(16), randomInt(256), 1 + randomInt(254)];
+  return [1 + randomInt(223), randomInt(256), randomInt(256), 1 + randomInt(254)];
+}
+
+function randomPrefix(level: Level): number {
+  // レベル1は /8・/16・/24 も多めに、レベル2・3はオクテットの途中で分かれるものを中心に
+  const aligned = level === 1 ? 0.35 : 0.25;
+  if (Math.random() < aligned) return [8, 16, 24][randomInt(3)];
+  let p: number;
+  do p = 9 + randomInt(22); // 9〜30
+  while (p % 8 === 0);
+  return p;
+}
+
+export function makeQuestions(level: Level, count = QUESTIONS_PER_SET): Question[] {
+  const seen = new Set<string>();
+  const list: Question[] = [];
+  while (list.length < count) {
+    const q = { level, ip: randomIp(), prefix: randomPrefix(level) };
+    const key = `${formatOctets(q.ip)}/${q.prefix}`;
+    // IPアドレス自体がネットワークアドレス・ブロードキャストアドレスだと答えがそのままになるので避ける
+    const info = analyze(q.ip, q.prefix);
+    if (info.hostNumber === 0 || info.hostNumber === 2 ** info.hostBits - 1) continue;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    list.push(q);
+  }
+  return list;
+}
+
+/** 問題の正解（レベル1はプレフィックス長、レベル2・3はアドレス） */
+export function correctAnswer(q: Question): string {
+  if (q.level === 1) return `/${q.prefix}`;
+  const info = analyze(q.ip, q.prefix);
+  return formatOctets(q.level === 2 ? info.network : info.broadcast);
+}

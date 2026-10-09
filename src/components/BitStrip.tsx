@@ -5,9 +5,10 @@ import { BOUNDARY_COLOR, HOST_BG, HOST_COLOR, NETWORK_BG, NETWORK_COLOR } from "
 
 type Props = {
   ip: Octets;
-  prefix: number;
-  /** ビットをクリックしたとき、そのビットの右側に境界線を動かす */
-  onSelectPrefix: (prefix: number) => void;
+  /** null のときは境目を決めていない状態（練習問題で答える前）として灰色で表示する */
+  prefix: number | null;
+  /** ビットをクリックしたとき、そのビットの右側に境界線を動かす。省略するとクリックできない */
+  onSelectPrefix?: (prefix: number) => void;
 };
 
 /**
@@ -28,8 +29,8 @@ export default function BitStrip({ ip, prefix, onSelectPrefix }: Props) {
       >
         {ip.map((value, o) => {
           const start = o * 8;
-          const netBits = Math.min(Math.max(prefix - start, 0), 8);
-          const whole = netBits === 8 ? "network" : netBits === 0 ? "host" : "split";
+          const netBits = prefix === null ? 0 : Math.min(Math.max(prefix - start, 0), 8);
+          const whole = prefix === null ? "none" : netBits === 8 ? "network" : netBits === 0 ? "host" : "split";
           return (
             <Box key={o}>
               <Typography
@@ -44,35 +45,38 @@ export default function BitStrip({ ip, prefix, onSelectPrefix }: Props) {
               <Box sx={{ display: "grid", gridTemplateColumns: "repeat(8, minmax(0, 1fr))" }}>
                 {bits.slice(start, start + 8).map((bit, j) => {
                   const i = start + j;
-                  const isNet = i < prefix;
+                  const isNet = prefix !== null && i < prefix;
+                  const fg = prefix === null ? "#455a64" : isNet ? NETWORK_COLOR : HOST_COLOR;
+                  const bg = prefix === null ? "#eceff1" : isNet ? NETWORK_BG : HOST_BG;
                   return (
                     <Box
                       key={i}
                       component="button"
                       type="button"
-                      onClick={() => onSelectPrefix(i + 1)}
+                      disabled={!onSelectPrefix}
+                      onClick={() => onSelectPrefix?.(i + 1)}
                       title={`ここまでをネットワーク部にする（/${i + 1}）`}
                       aria-label={`${i + 1}ビット目 ${bit}。ここまでをネットワーク部にする`}
                       sx={{
                         all: "unset",
-                        cursor: "pointer",
+                        cursor: onSelectPrefix ? "pointer" : "default",
                         textAlign: "center",
                         fontFamily: "monospace",
                         fontWeight: 700,
                         fontSize: { xs: "0.95rem", sm: "1.05rem" },
                         py: { xs: 0.75, sm: 1 },
-                        color: isNet ? NETWORK_COLOR : HOST_COLOR,
-                        bgcolor: isNet ? NETWORK_BG : HOST_BG,
+                        color: fg,
+                        bgcolor: bg,
                         borderTop: 2,
                         borderBottom: 2,
-                        borderColor: isNet ? NETWORK_COLOR : HOST_COLOR,
-                        borderLeft: i === prefix && prefix > 0 ? `3px solid ${BOUNDARY_COLOR}` : undefined,
+                        borderColor: fg,
+                        borderLeft: prefix !== null && i === prefix && prefix > 0 ? `3px solid ${BOUNDARY_COLOR}` : undefined,
                         borderTopLeftRadius: j === 0 ? 6 : 0,
                         borderBottomLeftRadius: j === 0 ? 6 : 0,
                         borderTopRightRadius: j === 7 ? 6 : 0,
                         borderBottomRightRadius: j === 7 ? 6 : 0,
                         transition: "background-color 0.2s, color 0.2s",
-                        "&:hover": { filter: "brightness(0.93)" },
+                        "&:hover": onSelectPrefix ? { filter: "brightness(0.93)" } : undefined,
                         "&:focus-visible": { outline: `2px solid ${BOUNDARY_COLOR}`, outlineOffset: 1 },
                       }}
                     >
@@ -101,7 +105,7 @@ export default function BitStrip({ ip, prefix, onSelectPrefix }: Props) {
           );
         })}
       </Box>
-      <ProportionBar prefix={prefix} />
+      {prefix !== null && <ProportionBar prefix={prefix} />}
     </Box>
   );
 }
